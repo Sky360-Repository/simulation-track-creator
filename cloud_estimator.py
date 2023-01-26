@@ -59,18 +59,17 @@ class CloudEstimator():
 
         t_int_decimal= MinValue+((MaxValue-MinValue)/2)
         t_int = np.ceil(t_int_decimal*100)/100
-        #index_of_t_int = np.where(np.isclose(x, t_int))
-        index_of_t_int = int(np.where(np.isclose(x, t_int))[0].astype(int))
+        index_of_t_int = np.argmin(np.abs(x - t_int))
 
         m0a = 0
         m1a = 0
-        for i in range(index_of_t_int[0][0]):
+        for i in range(index_of_t_int):
             m0a += y[i]
             m1a += x[i] * y[i]
         
         m0b = 0
         m1b = 0
-        for i in range(index_of_t_int[0][0], 200):
+        for i in range(index_of_t_int, 200):
             m0b += y[i]
             m1b += x[i] * y[i]
 
@@ -98,13 +97,13 @@ class CloudEstimator():
         
             m0a = 0
             m1a = 0
-            for i in range(index_of_t_int[0][0]):
+            for i in range(index_of_t_int):
                 m0a += y[i]
                 m1a += x[i] * y[i]
             
             m0b = 0
             m1b = 0
-            for i in range(index_of_t_int[0][0], 200):
+            for i in range(index_of_t_int, 200):
                 m0b += y[i]
                 m1b += x[i] * y[i]
         
@@ -133,7 +132,7 @@ class CloudEstimator():
         height, width, _ = frame.shape
         x, y = np.ogrid[:width, :height]
         center_x, center_y = width // 2, height // 2
-        radius = 1070
+        radius = 900
         mask = (x - center_x)**2 + (y - center_y)**2 < radius**2
         return mask        
 
@@ -159,11 +158,11 @@ class DayTimeCloudEstimator(CloudEstimator):
         # print("Standard deviation: " + str(std))
         if std > 0.03: # magic number
             #print("Bimodal distribution")
-            threshold = self.find_threshold_mce(frame)
-            _, ratio_mask = cv2.threshold(frame, threshold, 255, cv2.THRESH_BINARY)
+            threshold = self.find_threshold_mce(lambda_n)
+            _, ratio_mask = cv2.threshold(lambda_n, threshold, 255, cv2.THRESH_BINARY)
         else:
             #print("Unimodal distribution")
-            _, ratio_mask = cv2.threshold(frame, 0.25, 255, cv2.THRESH_BINARY)
+            _, ratio_mask = cv2.threshold(lambda_n, 0.25, 255, cv2.THRESH_BINARY)
 
         #ax.imshow(ratio_mask, cmap='gray')
         #ax.axis('off')  
@@ -189,6 +188,7 @@ class NightTimeCloudEstimator(CloudEstimator):
     def estimate(self, frame):
 
         mask = self.get_mask(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         #print("Processing image: " + image_files[i])
         otsu_threshold, image_result = cv2.threshold(frame, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU,)
